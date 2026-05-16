@@ -6,6 +6,7 @@ import '../../core/app_colors.dart';
 import '../../providers/vault_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/password_entry.dart';
+import './edit_password_screen.dart';
 
 class VaultScreen extends StatefulWidget {
   const VaultScreen({super.key});
@@ -169,103 +170,95 @@ class _VaultScreenState extends State<VaultScreen> with AutomaticKeepAliveClient
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1A1A20) : Colors.white,
         borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(
-                    entry.title.isNotEmpty ? entry.title[0].toUpperCase() : '?',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: accentColor,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: () => _showPasswordDetailsModal(context, entry, accentColor, isDark),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    Text(
-                      entry.title,
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Center(
+                        child: Text(
+                          entry.title.isNotEmpty ? entry.title[0].toUpperCase() : '?',
+                          style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: accentColor),
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      entry.username,
-                      style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textSecondary),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(entry.title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(entry.username, style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Provider.of<VaultProvider>(context, listen: false).toggleFavorite(entry.id),
+                      icon: Icon(
+                        entry.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        color: entry.isFavorite ? const Color(0xFFFF6B6B) : AppColors.textSecondary.withValues(alpha: 0.3),
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              GestureDetector(
-                onTap: () => Provider.of<VaultProvider>(context, listen: false).toggleFavorite(entry.id),
-                child: Icon(
-                  entry.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  color: entry.isFavorite ? const Color(0xFFFF6B6B) : AppColors.textSecondary.withValues(alpha: 0.3),
-                  size: 22,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF25252D) : AppColors.background,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    isVisible ? entry.password : '•' * 12,
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 14,
-                      letterSpacing: isVisible ? 0.5 : 3,
-                    ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF25252D) : AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          isVisible ? entry.password : '•' * 12,
+                          style: GoogleFonts.jetBrainsMono(fontSize: 14, letterSpacing: isVisible ? 0.5 : 3),
+                        ),
+                      ),
+                      _smallAction(
+                        isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        () => setState(() => _visiblePasswords[entry.id] = !isVisible),
+                      ),
+                      const SizedBox(width: 4),
+                      _smallAction(Icons.copy_outlined, () {
+                        Clipboard.setData(ClipboardData(text: entry.password));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Password copied', style: GoogleFonts.outfit()), behavior: SnackBarBehavior.floating));
+                      }),
+                      const SizedBox(width: 4),
+                      _smallAction(Icons.delete_outline_rounded, () {
+                        Provider.of<VaultProvider>(context, listen: false).removeEntry(entry.id);
+                      }, color: const Color(0xFFFF6B6B)),
+                    ],
                   ),
                 ),
-                _smallAction(
-                  isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  () => setState(() => _visiblePasswords[entry.id] = !isVisible),
-                ),
-                const SizedBox(width: 4),
-                _smallAction(Icons.copy_outlined, () {
-                  Clipboard.setData(ClipboardData(text: entry.password));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Password copied', style: GoogleFonts.outfit()),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }),
-                const SizedBox(width: 4),
-                _smallAction(Icons.delete_outline_rounded, () {
-                  Provider.of<VaultProvider>(context, listen: false).removeEntry(entry.id);
-                }, color: const Color(0xFFFF6B6B)),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -277,6 +270,190 @@ class _VaultScreenState extends State<VaultScreen> with AutomaticKeepAliveClient
         padding: const EdgeInsets.all(6),
         child: Icon(icon, size: 18, color: color ?? AppColors.textSecondary),
       ),
+    );
+  }
+
+  void _showPasswordDetailsModal(BuildContext context, PasswordEntry entry, Color accentColor, bool isDark) {
+    bool isPasswordVisibleInModal = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.fromLTRB(28, 28, 28, MediaQuery.of(modalContext).padding.bottom + 28),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A20) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: accentColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Center(
+                          child: Text(
+                            entry.title.isNotEmpty ? entry.title[0].toUpperCase() : '?',
+                            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold, color: accentColor),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(entry.title, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: accentColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(entry.category, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: accentColor)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(modalContext);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => EditPasswordScreen(entry: entry)));
+                        },
+                        icon: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(color: accentColor.withValues(alpha: 0.1), shape: BoxShape.circle),
+                          child: Icon(Icons.edit_rounded, color: accentColor, size: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  _modalDetailRow(modalContext, 'USERNAME / EMAIL / CODE', entry.username, Icons.person_outline_rounded, accentColor, isDark, onCopy: () {
+                    Clipboard.setData(ClipboardData(text: entry.username));
+                    ScaffoldMessenger.of(modalContext).showSnackBar(SnackBar(content: Text('Username copied', style: GoogleFonts.outfit())));
+                  }),
+                  const SizedBox(height: 20),
+                  _modalDetailRow(
+                    modalContext,
+                    'PASSWORD',
+                    isPasswordVisibleInModal ? entry.password : '••••••••••••',
+                    Icons.lock_outline_rounded,
+                    accentColor,
+                    isDark,
+                    isPassword: true,
+                    isPasswordVisible: isPasswordVisibleInModal,
+                    onToggleVisibility: () => setModalState(() => isPasswordVisibleInModal = !isPasswordVisibleInModal),
+                    onCopy: () {
+                      Clipboard.setData(ClipboardData(text: entry.password));
+                      ScaffoldMessenger.of(modalContext).showSnackBar(SnackBar(content: Text('Password copied', style: GoogleFonts.outfit())));
+                    },
+                  ),
+                  if (entry.website != null && entry.website!.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _modalDetailRow(modalContext, 'WEBSITE URL', entry.website!, Icons.link_rounded, accentColor, isDark, onCopy: () {
+                      Clipboard.setData(ClipboardData(text: entry.website!));
+                      ScaffoldMessenger.of(modalContext).showSnackBar(SnackBar(content: Text('Website URL copied', style: GoogleFonts.outfit())));
+                    }),
+                  ],
+                  if (entry.notes != null && entry.notes!.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _modalDetailRow(modalContext, 'NOTES', entry.notes!, Icons.notes_rounded, accentColor, isDark),
+                  ],
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(modalContext);
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => EditPasswordScreen(entry: entry)));
+                      },
+                      icon: const Icon(Icons.edit_rounded, size: 20),
+                      label: Text('EDIT ENTRY', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _modalDetailRow(BuildContext context, String label, String value, IconData icon, Color accentColor, bool isDark,
+      {bool isPassword = false, bool isPasswordVisible = false, VoidCallback? onToggleVisibility, VoidCallback? onCopy}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textSecondary.withValues(alpha: 0.6), letterSpacing: 1.2),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF25252D) : Colors.black.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: accentColor, size: 20),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  value,
+                  style: isPassword ? GoogleFonts.jetBrainsMono(fontSize: 15, letterSpacing: isPasswordVisible ? 0 : 2) : GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w500),
+                ),
+              ),
+              if (isPassword && onToggleVisibility != null) ...[
+                GestureDetector(
+                  onTap: onToggleVisibility,
+                  child: Padding(padding: const EdgeInsets.all(4), child: Icon(isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 20, color: AppColors.textSecondary)),
+                ),
+                const SizedBox(width: 8),
+              ],
+              if (onCopy != null) ...[
+                GestureDetector(
+                  onTap: onCopy,
+                  child: Padding(padding: const EdgeInsets.all(4), child: Icon(Icons.copy_rounded, size: 20, color: AppColors.textSecondary)),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 

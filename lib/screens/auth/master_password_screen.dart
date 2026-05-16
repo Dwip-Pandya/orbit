@@ -20,6 +20,31 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
   String? _errorText;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkBiometrics();
+    });
+  }
+
+  Future<void> _checkBiometrics() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.isFirstLaunch && authProvider.biometricEnabled) {
+      final success = await authProvider.authenticateWithBiometrics();
+      if (success && mounted) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const MainShell(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -48,7 +73,7 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 80),
-                _buildAnimatedIcon(accentColor),
+                _buildAnimatedIcon(accentColor, authProvider),
                 const SizedBox(height: 48),
                 Text(
                   isFirstLaunch ? 'Create Your Vault' : 'Welcome to Orbit',
@@ -63,7 +88,7 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
                 Text(
                   isFirstLaunch
                       ? 'Secure your digital life with a single, strong master password.'
-                      : 'Unlock your encrypted vault to access your passwords.',
+                      : (authProvider.biometricEnabled ? 'Unlock with fingerprint above or enter master password.' : 'Unlock your encrypted vault to access your passwords.'),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.outfit(
                     fontSize: 16,
@@ -127,7 +152,17 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                if (!isFirstLaunch)
+                if (!isFirstLaunch) ...[
+                  if (authProvider.biometricEnabled)
+                    TextButton.icon(
+                      onPressed: _checkBiometrics,
+                      icon: Icon(Icons.fingerprint_rounded, color: accentColor, size: 20),
+                      label: Text(
+                        'Unlock with Fingerprint',
+                        style: GoogleFonts.outfit(color: accentColor, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                  const SizedBox(height: 12),
                   TextButton(
                     onPressed: () {},
                     child: Text(
@@ -138,6 +173,7 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
                       ),
                     ),
                   ),
+                ],
                 const SizedBox(height: 40),
               ],
             ),
@@ -147,34 +183,37 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
     );
   }
 
-  Widget _buildAnimatedIcon(Color accentColor) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: accentColor.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+  Widget _buildAnimatedIcon(Color accentColor, AuthProvider authProvider) {
+    return GestureDetector(
+      onTap: (!authProvider.isFirstLaunch && authProvider.biometricEnabled) ? _checkBiometrics : null,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: accentColor,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: accentColor.withValues(alpha: 0.4),
-                blurRadius: 30,
-                offset: const Offset(0, 15),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: accentColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: accentColor.withValues(alpha: 0.4),
+                  blurRadius: 30,
+                  offset: const Offset(0, 15),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.fingerprint_rounded, size: 48, color: Colors.white),
           ),
-          child: const Icon(Icons.fingerprint_rounded, size: 48, color: Colors.white),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -260,3 +299,4 @@ class _MasterPasswordScreenState extends State<MasterPasswordScreen> {
     super.dispose();
   }
 }
+

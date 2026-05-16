@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:screen_protector/screen_protector.dart';
 
 class AuthProvider extends ChangeNotifier {
   bool _isFirstLaunch = true;
   bool _isAuthenticated = false;
   String? _masterPassword;
+  bool _biometricEnabled = false;
+  bool _screenshotProtection = true;
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
   bool get isFirstLaunch => _isFirstLaunch;
   bool get isAuthenticated => _isAuthenticated;
+  bool get biometricEnabled => _biometricEnabled;
+  bool get screenshotProtection => _screenshotProtection;
 
   AuthProvider() {
     _init();
@@ -16,6 +23,8 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
     _masterPassword = prefs.getString('master_password');
+    _biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
+    _screenshotProtection = prefs.getBool('screenshot_protection') ?? true;
     _isFirstLaunch = _masterPassword == null;
     notifyListeners();
   }
@@ -39,6 +48,47 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
+  Future<bool> authenticateWithBiometrics() async {
+    try {
+      final canCheck = await _localAuth.canCheckBiometrics || await _localAuth.isDeviceSupported();
+      if (!canCheck) return false;
+
+      final didAuthenticate = await _localAuth.authenticate(
+        localizedReason: 'Unlock Orbit Vault',
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
+      );
+
+      if (didAuthenticate) {
+        _isAuthenticated = true;
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Biometric error: $e');
+    }
+    return false;
+  }
+
+  Future<void> toggleBiometric(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('biometric_enabled', enabled);
+    _biometricEnabled = enabled;
+    notifyListeners();
+  }
+
+  Future<void> toggleScreenshotProtection(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('screenshot_protection', enabled);
+    _screenshotProtection = enabled;
+    if (enabled) {
+      await ScreenProtector.preventScreenshotOn();
+    } else {
+      await ScreenProtector.preventScreenshotOff();
+    }
+    notifyListeners();
+  }
+
   void logout() {
     _isAuthenticated = false;
     notifyListeners();
@@ -55,3 +105,4 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 }
+

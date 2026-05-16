@@ -1,20 +1,140 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/password_entry.dart';
 
 class VaultProvider extends ChangeNotifier {
-  final List<PasswordEntry> _entries = [];
-  final List<String> _categories = ['Social', 'Work', 'Entertainment', 'Finance', 'General', 'Other'];
+  List<PasswordEntry> _entries = [];
+  List<String> _categories = ['Social', 'Work', 'Entertainment', 'Finance', 'General', 'Other'];
+  String _backupSchedule = 'never'; // 'daily', 'weekly', 'monthly', 'never'
 
   List<PasswordEntry> get entries => List.unmodifiable(_entries);
   List<String> get categories => List.unmodifiable(_categories);
+  String get backupSchedule => _backupSchedule;
+
+  VaultProvider() {
+    _init();
+  }
+
+  Future<void> _init() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Load categories
+    final catsJson = prefs.getString('vault_categories_cache');
+    if (catsJson != null) {
+      final List<dynamic> decoded = jsonDecode(catsJson);
+      _categories = decoded.map((e) => e.toString()).toList();
+    }
+
+    // Load entries
+    final entriesJson = prefs.getString('vault_entries_cache');
+    if (entriesJson != null) {
+      final List<dynamic> decoded = jsonDecode(entriesJson);
+      _entries = decoded.map((e) => PasswordEntry.fromJson(e)).toList();
+    }
+
+    // Load backup schedule
+    _backupSchedule = prefs.getString('backup_schedule') ?? 'never';
+
+    notifyListeners();
+    _checkAndRunScheduledBackup();
+  }
+
+  Future<void> _saveCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('vault_categories_cache', jsonEncode(_categories));
+    await prefs.setString('vault_entries_cache', jsonEncode(_entries.map((e) => e.toJson()).toList()));
+  }
+
+  Future<void> setBackupSchedule(String schedule) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('backup_schedule', schedule);
+    _backupSchedule = schedule;
+    notifyListeners();
+    _checkAndRunScheduledBackup();
+  }
+
+  Future<void> _checkAndRunScheduledBackup() async {
+    if (_backupSchedule == 'never' || _entries.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final lastBackupTime = prefs.getInt('last_backup_timestamp') ?? 0;
+    final now = DateTime.now();
+    final lastDate = DateTime.fromMillisecondsSinceEpoch(lastBackupTime);
+    final diff = now.difference(lastDate);
+
+    bool shouldBackup = false;
+    if (_backupSchedule == 'daily' && diff.inDays >= 1) shouldBackup = true;
+    if (_backupSchedule == 'weekly' && diff.inDays >= 7) shouldBackup = true;
+    if (_backupSchedule == 'monthly' && diff.inDays >= 30) shouldBackup = true;
+    if (lastBackupTime == 0) shouldBackup = true;
+
+    if (shouldBackup) {
+      await createAutomatedBackup();
+    }
+  }
+
+  Future<String?> createAutomatedBackup() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final backupDir = Directory('${docDir.path}/automated_backups');
+      if (!await backupDir.exists()) {
+        await backupDir.create(recursive: true);
+      }
+
+      final now = DateTime.now();
+      final timestamp = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}${now.second.toString().padLeft(2, '0')}';
+      final file = File('${backupDir.path}/orbit_backup_$timestamp.json');
+
+      final data = exportVault();
+      final jsonString = const JsonEncoder.withIndent('  ').convert(data);
+      await file.writeAsString(jsonString);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('last_backup_timestamp', now.millisecondsSinceEpoch);
+
+      return file.path;
+    } catch (e) {
+      debugPrint('Automated backup error: $e');
+    }
+    return null;
+  }
+
+  Future<List<File>> getAutomatedBackupFiles() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final backupDir = Directory('${docDir.path}/automated_backups');
+      if (!await backupDir.exists()) return [];
+
+      final files = backupDir.listSync().whereType<File>().where((f) => f.path.endsWith('.json')).toList();
+      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+      return files;
+    } catch (e) {
+      debugPrint('Error reading backups: $e');
+    }
+    return [];
+  }
 
   void addEntry(PasswordEntry entry) {
     _entries.insert(0, entry); 
+    _saveCache();
     notifyListeners();
+  }
+
+  void updateEntry(PasswordEntry updatedEntry) {
+    final index = _entries.indexWhere((e) => e.id == updatedEntry.id);
+    if (index != -1) {
+      _entries[index] = updatedEntry;
+      _saveCache();
+      notifyListeners();
+    }
   }
 
   void removeEntry(String id) {
     _entries.removeWhere((e) => e.id == id);
+    _saveCache();
     notifyListeners();
   }
 
@@ -22,6 +142,7 @@ class VaultProvider extends ChangeNotifier {
     final index = _entries.indexWhere((e) => e.id == id);
     if (index != -1) {
       _entries[index] = _entries[index].copyWith(isFavorite: !_entries[index].isFavorite);
+      _saveCache();
       notifyListeners();
     }
   }
@@ -30,6 +151,7 @@ class VaultProvider extends ChangeNotifier {
   void addCategory(String name) {
     if (!_categories.contains(name)) {
       _categories.add(name);
+      _saveCache();
       notifyListeners();
     }
   }
@@ -44,6 +166,7 @@ class VaultProvider extends ChangeNotifier {
           _entries[i] = _entries[i].copyWith(category: newName);
         }
       }
+      _saveCache();
       notifyListeners();
     }
   }
@@ -56,6 +179,7 @@ class VaultProvider extends ChangeNotifier {
         _entries[i] = _entries[i].copyWith(category: 'General');
       }
     }
+    _saveCache();
     notifyListeners();
   }
 
@@ -85,7 +209,7 @@ class VaultProvider extends ChangeNotifier {
       if (cats != null) {
         for (final cat in cats) {
           final cName = cat.toString().trim();
-          if (cName.isNotEmpty && !_categories.contains(cName)) {
+          if (cName.isNotEmpty && (!_categories.contains(cName))) {
             _categories.add(cName);
           }
         }
@@ -119,6 +243,7 @@ class VaultProvider extends ChangeNotifier {
     }
 
     if (importedCount > 0 || data.containsKey('categories')) {
+      _saveCache();
       notifyListeners();
     }
 
@@ -128,4 +253,5 @@ class VaultProvider extends ChangeNotifier {
     };
   }
 }
+
 

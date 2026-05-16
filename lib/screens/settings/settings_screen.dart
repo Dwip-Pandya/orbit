@@ -8,6 +8,7 @@ import '../splash/splash_screen.dart';
 import 'accent_color_screen.dart';
 import 'category_config_screen.dart';
 import 'data_management_screen.dart';
+import 'autofill_config_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
 
@@ -26,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAlive
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final authProvider = Provider.of<AuthProvider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final accentColor = themeProvider.accentColor;
     final isDark = themeProvider.themeMode == ThemeMode.dark;
@@ -40,6 +42,30 @@ class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAlive
               physics: const BouncingScrollPhysics(),
               children: [
                 _sectionTitle('SECURITY'),
+                _settingsTile(
+                  Icons.fingerprint_rounded,
+                  'Biometric Unlock',
+                  accentColor,
+                  isDark: isDark,
+                  subtitle: 'Unlock vault with fingerprint',
+                  trailing: Switch(
+                    value: authProvider.biometricEnabled,
+                    onChanged: (v) => authProvider.toggleBiometric(v),
+                    activeColor: accentColor,
+                  ),
+                ),
+                _settingsTile(
+                  Icons.security_rounded,
+                  'Screenshot Protection',
+                  accentColor,
+                  isDark: isDark,
+                  subtitle: 'Block screenshots & hide preview',
+                  trailing: Switch(
+                    value: authProvider.screenshotProtection,
+                    onChanged: (v) => authProvider.toggleScreenshotProtection(v),
+                    activeColor: accentColor,
+                  ),
+                ),
                 _settingsTile(
                   Icons.lock_outline_rounded,
                   'Change Master Password',
@@ -69,6 +95,19 @@ class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAlive
                     value: _autoLock,
                     onChanged: (v) => setState(() => _autoLock = v),
                     activeColor: accentColor,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                _sectionTitle('OS INTEGRATION'),
+                _settingsTile(
+                  Icons.aod_rounded,
+                  'Autofill Service',
+                  accentColor,
+                  isDark: isDark,
+                  subtitle: 'Configure Android autofill integration',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AutofillConfigScreen()),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -120,7 +159,6 @@ class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAlive
                 _settingsTile(
                   Icons.delete_forever_outlined,
                   'Clear All Data',
-
                   accentColor,
                   isDark: isDark,
                   subtitle: 'Remove all saved passwords',
@@ -159,6 +197,7 @@ class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAlive
       ),
     );
   }
+
 
   Widget _buildHeader(BuildContext context, Color accentColor, bool isDark) {
     return Container(

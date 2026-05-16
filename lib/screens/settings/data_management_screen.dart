@@ -40,6 +40,9 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _sectionTitle('AUTOMATED BACKUP SCHEDULE'),
+                      _buildScheduleSelector(context, vault, accentColor, isDark),
+                      const SizedBox(height: 32),
                       _sectionTitle('EXPORT DATA'),
                       _buildCard(
                         title: 'Export Vault',
@@ -63,6 +66,9 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
                         buttonIcon: Icons.upload_rounded,
                         onTap: () => _handleImport(context, vault, accentColor),
                       ),
+                      const SizedBox(height: 32),
+                      _sectionTitle('AUTOMATED BACKUP HISTORY'),
+                      _buildBackupHistoryList(context, vault, accentColor, isDark),
                     ],
                   ),
                 ),
@@ -126,6 +132,227 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
           letterSpacing: 1.5,
         ),
       ),
+    );
+  }
+
+  Widget _buildScheduleSelector(BuildContext context, VaultProvider vault, Color accentColor, bool isDark) {
+    final options = [
+      {'key': 'daily', 'label': 'Daily'},
+      {'key': 'weekly', 'label': 'Weekly'},
+      {'key': 'monthly', 'label': 'Monthly'},
+      {'key': 'never', 'label': 'Never'},
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1A20) : Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Automatic JSON Backup',
+            style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Orbit will automatically backup your encrypted vault to local storage at the selected interval.',
+            style: GoogleFonts.outfit(fontSize: 14, color: AppColors.textSecondary, height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: options.map((opt) {
+              final isSelected = vault.backupSchedule == opt['key'];
+              return ChoiceChip(
+                label: Text(
+                  opt['label']!,
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                  ),
+                ),
+                selected: isSelected,
+                selectedColor: accentColor,
+                backgroundColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                onSelected: (_) => vault.setBackupSchedule(opt['key']!),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                setState(() => _isLoading = true);
+                final path = await vault.createAutomatedBackup();
+                setState(() => _isLoading = false);
+                if (path != null && context.mounted) {
+                  _showMessageDialog(
+                    context: context,
+                    title: 'Backup Created',
+                    message: 'Automated backup successfully saved to:\n$path',
+                    icon: Icons.check_circle_rounded,
+                    color: AppColors.success,
+                  );
+                }
+              },
+              icon: Icon(Icons.backup_rounded, color: accentColor, size: 20),
+              label: Text(
+                'CREATE BACKUP NOW',
+                style: GoogleFonts.outfit(color: accentColor, fontWeight: FontWeight.bold),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: accentColor.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackupHistoryList(BuildContext context, VaultProvider vault, Color accentColor, bool isDark) {
+    return FutureBuilder<List<File>>(
+      future: vault.getAutomatedBackupFiles(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: accentColor));
+        }
+
+        final files = snapshot.data ?? [];
+        if (files.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1A1A20) : Colors.white,
+              borderRadius: BorderRadius.circular(28),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              'No automated backups created yet.',
+              style: GoogleFonts.outfit(color: AppColors.textSecondary),
+            ),
+          );
+        }
+
+        return Column(
+          children: files.map((file) {
+            final name = file.path.split('/').last.split('\\').last;
+            final lastMod = file.lastModifiedSync();
+            final formattedTime = '${lastMod.year}-${lastMod.month.toString().padLeft(2, '0')}-${lastMod.day.toString().padLeft(2, '0')} ${lastMod.hour.toString().padLeft(2, '0')}:${lastMod.minute.toString().padLeft(2, '0')}';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1A1A20) : Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: accentColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                  child: Icon(Icons.history_rounded, color: accentColor),
+                ),
+                title: Text(name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15)),
+                subtitle: Text(formattedTime, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13)),
+                trailing: const Icon(Icons.more_vert_rounded, size: 20),
+                onTap: () => _showBackupActionSheet(context, vault, file, accentColor, isDark),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  void _showBackupActionSheet(BuildContext context, VaultProvider vault, File file, Color accentColor, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1A1A20) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 24),
+              Text('Backup Action', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: Icon(Icons.restore_rounded, color: AppColors.success),
+                title: Text('Restore Vault from this Backup', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  setState(() => _isLoading = true);
+                  try {
+                    final content = await file.readAsString();
+                    final data = jsonDecode(content) as Map<String, dynamic>;
+                    final stats = vault.importVault(data);
+                    if (context.mounted) {
+                      _showMessageDialog(
+                        context: context,
+                        title: 'Restore Complete',
+                        message: 'Successfully imported ${stats['imported']} passwords.\nSkipped ${stats['duplicates']} duplicates.',
+                        icon: Icons.check_circle_rounded,
+                        color: AppColors.success,
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      _showMessageDialog(context: context, title: 'Restore Failed', message: e.toString(), icon: Icons.error_rounded, color: AppColors.error);
+                    }
+                  } finally {
+                    setState(() => _isLoading = false);
+                  }
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.download_rounded, color: accentColor),
+                title: Text('Export & Save File', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  setState(() => _isLoading = true);
+                  try {
+                    final bytes = await file.readAsBytes();
+                    final outputFile = await FilePicker.saveFile(
+                      dialogTitle: 'Export Backup File',
+                      fileName: file.path.split('/').last.split('\\').last,
+                      type: FileType.custom,
+                      allowedExtensions: ['json'],
+                      bytes: bytes,
+                    );
+                    if (outputFile != null && context.mounted) {
+                      _showMessageDialog(context: context, title: 'Saved Successful', message: outputFile, icon: Icons.check_circle_rounded, color: AppColors.success);
+                    }
+                  } finally {
+                    setState(() => _isLoading = false);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -297,7 +524,6 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
     }
   }
 
-
   void _showMessageDialog({
     required BuildContext context,
     required String title,
@@ -354,3 +580,4 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
     );
   }
 }
+

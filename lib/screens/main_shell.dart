@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:screen_protector/screen_protector.dart';
 import '../core/app_colors.dart';
 import '../providers/theme_provider.dart';
+import '../providers/auth_provider.dart';
 import 'home/home_screen.dart';
 import 'vault/vault_screen.dart';
 import 'add/add_password_screen.dart';
@@ -48,7 +50,15 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
     _navAnimation = Tween<double>(begin: 2.0, end: 2.0).animate(
       CurvedAnimation(parent: _navController, curve: Curves.easeOutCubic),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.screenshotProtection) {
+        ScreenProtector.preventScreenshotOn();
+      }
+    });
   }
+
 
   void _onPageChanged(int index) {
     if (_currentIndex == index) return;

@@ -6,30 +6,37 @@ import '../../providers/vault_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/password_entry.dart';
 
-class AddPasswordScreen extends StatefulWidget {
-  const AddPasswordScreen({super.key});
+class EditPasswordScreen extends StatefulWidget {
+  final PasswordEntry entry;
+
+  const EditPasswordScreen({super.key, required this.entry});
 
   @override
-  State<AddPasswordScreen> createState() => _AddPasswordScreenState();
+  State<EditPasswordScreen> createState() => _EditPasswordScreenState();
 }
 
-class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKeepAliveClientMixin {
-  final _titleController = TextEditingController();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _websiteController = TextEditingController();
-  final _notesController = TextEditingController();
-  String _selectedCategory = 'General';
+class _EditPasswordScreenState extends State<EditPasswordScreen> {
+  late TextEditingController _titleController;
+  late TextEditingController _usernameController;
+  late TextEditingController _passwordController;
+  late TextEditingController _websiteController;
+  late TextEditingController _notesController;
+  late String _selectedCategory;
   bool _showPassword = false;
   double _strength = 0;
 
   @override
-  bool get wantKeepAlive => true;
-
-  @override
   void initState() {
     super.initState();
+    _titleController = TextEditingController(text: widget.entry.title);
+    _usernameController = TextEditingController(text: widget.entry.username);
+    _passwordController = TextEditingController(text: widget.entry.password);
+    _websiteController = TextEditingController(text: widget.entry.website ?? '');
+    _notesController = TextEditingController(text: widget.entry.notes ?? '');
+    _selectedCategory = widget.entry.category;
+
     _passwordController.addListener(_updateStrength);
+    _updateStrength();
   }
 
   void _updateStrength() {
@@ -48,7 +55,6 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final accentColor = themeProvider.accentColor;
     final vault = Provider.of<VaultProvider>(context);
@@ -69,7 +75,7 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
                     _buildLabel('Account Title'),
                     _buildField(_titleController, 'e.g. Instagram', Icons.title_rounded, accentColor, isDark),
                     const SizedBox(height: 20),
-                    _buildLabel('Username / Email'),
+                    _buildLabel('Username / Email / Code'),
                     _buildField(_usernameController, 'e.g. user@orbit.com', Icons.person_outline_rounded, accentColor, isDark),
                   ]),
                   const SizedBox(height: 24),
@@ -110,7 +116,7 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: _saveEntry,
+                      onPressed: _saveChanges,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: accentColor,
                         foregroundColor: Colors.white,
@@ -121,10 +127,10 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.check_circle_rounded, size: 22),
+                          const Icon(Icons.save_rounded, size: 22),
                           const SizedBox(width: 12),
                           Text(
-                            'SAVE TO VAULT',
+                            'SAVE CHANGES',
                             style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                           ),
                         ],
@@ -146,24 +152,20 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1A1A20) : Colors.white,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(Icons.add_task_rounded, color: accentColor, size: 22),
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 4),
           Text(
-            'Create New',
-            style: GoogleFonts.outfit(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            'Edit Entry',
+            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -199,13 +201,7 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, left: 4),
-      child: Text(
-        text,
-        style: GoogleFonts.outfit(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      child: Text(text, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600)),
     );
   }
 
@@ -222,14 +218,8 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
         fillColor: isDark ? const Color(0xFF25252D) : AppColors.background.withValues(alpha: 0.5),
         filled: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: accentColor, width: 1.5),
-        ),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: accentColor, width: 1.5)),
         suffixIcon: isPassword
             ? GestureDetector(
                 onTap: () => setState(() => _showPassword = !_showPassword),
@@ -278,10 +268,7 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
               ),
             ),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: strengthColor),
-            ),
+            Text(label, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: strengthColor)),
           ],
         ),
       ],
@@ -300,22 +287,13 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
           value: _selectedCategory,
           isExpanded: true,
           icon: Icon(Icons.keyboard_arrow_down_rounded, color: accentColor),
-          style: GoogleFonts.outfit(
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-            color: isDark ? Colors.white : AppColors.textPrimary,
-          ),
+          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w500, color: isDark ? Colors.white : AppColors.textPrimary),
           dropdownColor: isDark ? const Color(0xFF25252D) : Colors.white,
           borderRadius: BorderRadius.circular(20),
           items: vault.categories.map((String category) {
             return DropdownMenuItem<String>(
               value: category,
-              child: Text(
-                category,
-                style: GoogleFonts.outfit(
-                  color: isDark ? Colors.white : AppColors.textPrimary,
-                ),
-              ),
+              child: Text(category, style: GoogleFonts.outfit(color: isDark ? Colors.white : AppColors.textPrimary)),
             );
           }).toList(),
           onChanged: (val) {
@@ -326,43 +304,30 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> with AutomaticKee
     );
   }
 
-  void _saveEntry() {
+  void _saveChanges() {
     if (_titleController.text.isEmpty || _usernameController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please fill all required fields', style: GoogleFonts.outfit()),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text('Please fill all required fields', style: GoogleFonts.outfit()), behavior: SnackBarBehavior.floating),
       );
       return;
     }
 
-    final entry = PasswordEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    final updated = widget.entry.copyWith(
       title: _titleController.text,
       username: _usernameController.text,
       password: _passwordController.text,
       website: _websiteController.text,
       notes: _notesController.text,
       category: _selectedCategory,
-      createdAt: DateTime.now(),
     );
 
-    Provider.of<VaultProvider>(context, listen: false).addEntry(entry);
+    Provider.of<VaultProvider>(context, listen: false).updateEntry(updated);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Saved to your vault', style: GoogleFonts.outfit()),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text('Entry updated successfully', style: GoogleFonts.outfit()), behavior: SnackBarBehavior.floating),
     );
 
-    _titleController.clear();
-    _usernameController.clear();
-    _passwordController.clear();
-    _websiteController.clear();
-    _notesController.clear();
-    setState(() => _selectedCategory = 'General');
+    Navigator.pop(context, true);
   }
 
   @override
