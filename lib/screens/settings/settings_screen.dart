@@ -7,8 +7,10 @@ import '../../providers/theme_provider.dart';
 import '../splash/splash_screen.dart';
 import 'accent_color_screen.dart';
 import 'category_config_screen.dart';
+import 'data_management_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
+
   const SettingsScreen({super.key});
 
   @override
@@ -105,8 +107,20 @@ class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAlive
                 const SizedBox(height: 24),
                 _sectionTitle('DATA'),
                 _settingsTile(
+                  Icons.save_alt_rounded,
+                  'Data Management',
+                  accentColor,
+                  isDark: isDark,
+                  subtitle: 'Import and export vault backups',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const DataManagementScreen()),
+                  ),
+                ),
+                _settingsTile(
                   Icons.delete_forever_outlined,
                   'Clear All Data',
+
                   accentColor,
                   isDark: isDark,
                   subtitle: 'Remove all saved passwords',

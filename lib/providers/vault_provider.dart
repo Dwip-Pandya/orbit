@@ -67,4 +67,65 @@ class VaultProvider extends ChangeNotifier {
 
   int get totalCount => _entries.length;
   int get favoriteCount => _entries.where((e) => e.isFavorite).length;
+
+  Map<String, dynamic> exportVault() {
+    return {
+      'version': 1,
+      'categories': _categories,
+      'entries': _entries.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  Map<String, int> importVault(Map<String, dynamic> data) {
+    int importedCount = 0;
+    int duplicateCount = 0;
+
+    if (data.containsKey('categories')) {
+      final cats = data['categories'] as List<dynamic>?;
+      if (cats != null) {
+        for (final cat in cats) {
+          final cName = cat.toString().trim();
+          if (cName.isNotEmpty && !_categories.contains(cName)) {
+            _categories.add(cName);
+          }
+        }
+      }
+    }
+
+    if (data.containsKey('entries')) {
+      final items = data['entries'] as List<dynamic>?;
+      if (items != null) {
+        for (final item in items) {
+          if (item is Map<String, dynamic>) {
+            final newEntry = PasswordEntry.fromJson(item);
+            
+            // Check for identical entry (same title, same website, same password)
+            final isDuplicate = _entries.any((existing) {
+              final sameTitle = existing.title.trim().toLowerCase() == newEntry.title.trim().toLowerCase();
+              final sameWebsite = (existing.website ?? '').trim().toLowerCase() == (newEntry.website ?? '').trim().toLowerCase();
+              final samePassword = existing.password == newEntry.password;
+              return sameTitle && sameWebsite && samePassword;
+            });
+
+            if (isDuplicate) {
+              duplicateCount++;
+            } else {
+              _entries.insert(0, newEntry);
+              importedCount++;
+            }
+          }
+        }
+      }
+    }
+
+    if (importedCount > 0 || data.containsKey('categories')) {
+      notifyListeners();
+    }
+
+    return {
+      'imported': importedCount,
+      'duplicates': duplicateCount,
+    };
+  }
 }
+

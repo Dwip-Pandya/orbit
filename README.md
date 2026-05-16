@@ -1,17 +1,77 @@
-# orbit
+# 🪐 Orbit: Premium Password Manager
 
-A new Flutter project.
+<div align="center">
+  <h3>Secure, Beautiful, and Seamless Digital Vault</h3>
+  <p>A high-fidelity Flutter application engineered to protect your credentials with uncompromising security and stunning aesthetics.</p>
+</div>
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## ✨ Key Features
 
-A few resources to get you started if this is your first Flutter project:
+### 🛡️ Master Password Security
+- **Single Master Key:** Secure your entire digital life with one robust master password.
+- **Change & Verification:** Easily change your master password anytime with built-in confirmation workflows.
+- **Always-Rounded Inputs:** Clean, permanently rounded input fields (28px radius) with premium subtle borders.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+### 🔑 Secure Vault & Organization
+- **Comprehensive Storage:** Store account titles, usernames/emails, passwords, website URLs, and custom notes.
+- **Custom Categories:** Organize credentials into categories (`Social`, `Work`, `Finance`, `Entertainment`, `General`, `Other`). Add, edit, or delete categories dynamically.
+- **Password Obscuring & Favorites:** Easily toggle password visibility or star frequent accounts for rapid access.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### ⚡ Smart Password Generator
+- **Real-Time Strength Indicator:** Visual strength gauge (Weak, Fair, Strong, Unbreakable) updates live as you type or generate passwords.
+- **Custom Parameters:** Instantly generate passwords of any length with custom character inclusions (uppercase, digits, special symbols).
+
+### 🌓 Adaptive Theming & Appearance
+- **Global Light & Dark Modes:** Fully adaptive UI components, cards, surfaces, and shadows that transition flawlessly between light and dark mode.
+- **50 Curated Accent Colors:** Personalize the app's entire color palette instantly. Search through exactly 50 premium shades (from *Royal Blue* to *Neon Purple*).
+
+### 🌊 Seamless Curved Navigation Bar
+- **Physically Merged Aesthetics:** Custom bezier curve painter (`cubicTo`) creates a zero-gap, continuous material "dip" where the active icon perfectly docks.
+- **Zero Latency Transitions:** Responsive, snappy page sliding and animated pop-up bouncy icons (`Curves.easeInOutBack`).
+
+### 💾 Data Management (Import / Export)
+- **JSON Backup & Restore:** Export your entire vault and custom categories to a securely formatted `.json` backup file on your device.
+- **Strict Duplicate Checking:** When importing an Orbit backup file, identical passwords (same title, website, and password) are automatically skipped to prevent vault clutter, while new passwords or updated entries are seamlessly merged.
+
+---
+
+## 🛠️ Technology Stack & Architecture
+
+- **Framework:** [Flutter](https://flutter.dev/) (Dart 3.x)
+- **State Management:** `Provider` (`AuthProvider`, `VaultProvider`, `ThemeProvider`)
+- **Typography:** `Google Fonts` (*Outfit*)
+- **File System:** `file_picker` & `dart:io` for cross-platform JSON data management
+- **Design System:** Material 3 & Custom Glassmorphism / Gradient Surfaces
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Flutter SDK (v3.10+)
+- Android Studio / VS Code / Windows build tools
+
+### Installation & Running Locally
+
+1. **Clone the repository / navigate to project directory:**
+   ```bash
+   cd orbit
+   ```
+
+2. **Get all Flutter packages:**
+   ```bash
+   flutter pub get
+   ```
+
+3. **Run the application in release mode for maximum fluidity:**
+   ```bash
+   flutter run --release
+   ```
+
+---
+
+<div align="center">
+  <p>Crafted with premium visual excellence and robust data integrity.</p>
+</div>
